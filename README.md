@@ -61,15 +61,15 @@ usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] 
 
 
 
-e.g. Train on `WebOfScience` with `batch=12, lambda=0.05, gamma=0.02, experts=4, ta=0.5, eta=0.91`. Checkpoints will be in `checkpoints/WebOfScience-test/`.
+e.g. Train on `WebOfScience` with `batch=16, lambda=0.05, gamma=0.02, experts=4, ta=0.5, eta=0.91`. Checkpoints will be in `checkpoints/WebOfScience-test/`.
 
 ```shell
-python train.py --name test --batch 12 --data WebOfScience --lamb 0.05 --thre 0.02 --experts 4 --ta 0.5 --eta 0.91
+python train.py --name test --batch 16 --data WebOfScience --lamb 0.05 --thre 0.02 --experts 4 --ta 0.5 --eta 0.91
 ```
 
 ### Reproducibility
 
-We apply the BERT model as a text encoder. For Graphormer, we set the adaptive graph attention head to 8, the batch size to 16, and the feature size to 768. The selected optimizer is Adam, and the learning rate is set to 3×10−5 . The default training epoch is 20. If the effect does not improve after 5 epochs, the training is suspended in advance. The number of experts is set to 4, and the threshold τ = 0.91. Four experts are to jointly train tailed samples and one expert is used to train shallow-head samples. The threshold γ is set to 0.02 on WOS and AAPD, 0.005 on RCV1-V2, and 0.01 on BGC. Respectively. The loss weight λ is 0.1. We implement the model in PyTorch and experimented on NVIDIA GeForce RTX 3090.
+We apply the BERT model as a text encoder. For Graphormer, we set the adaptive graph attention head to 8, the batch size to 16, and the feature size to 768. The selected optimizer is Adam, and the learning rate is set to 3×10−5 . The default training epoch is 20. If the effect does not improve after 5 epochs, the training is suspended in advance. The number of experts is set to 4, and the threshold τ = 0.91. Four experts are to jointly train tailed samples and one expert is used to train shallow-head samples. The threshold γ is set to 0.02 on WOS and AAPD, 0.005 on RCV1-V2, and 0.01 on BGC. Respectively. The loss weight λ is 0.1. Different batch sizes can have some impact on the model. We implement the model in PyTorch and experimented on NVIDIA GeForce RTX 3090.
 
 ## Test
 ```shell
