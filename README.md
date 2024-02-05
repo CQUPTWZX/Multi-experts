@@ -45,10 +45,10 @@ usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] 
 
 
 
-e.g. Train on `WebOfScience` with `batch=12, lambda=0.05, gamma=0.02`. Checkpoints will be in `checkpoints/WebOfScience-test/`.
+e.g. Train on `WebOfScience` with `batch=12, lambda=0.05, gamma=0.02, experts=4, ta=0.5, eta=0.91`. Checkpoints will be in `checkpoints/WebOfScience-test/`.
 
 ```shell
-python train.py --name test --batch 12 --data WebOfScience --lamb 0.05 --thre 0.02
+python train.py --name test --batch 12 --data WebOfScience --lamb 0.05 --thre 0.02 --experts 4 --ta 0.5 --eta 0.91
 ```
 
 ### Reproducibility
@@ -57,15 +57,14 @@ The related parameter configuration has been published in the paper.
 
 ## Test
 
-```
 usage: test.py [-h] [--device DEVICE] [--batch BATCH] [--name NAME] [--experts] [--eta]
+| Option |  Description |
+|--------|-------------|
+| -h, --help | show this help message and exit |
+| --device DEVICE | cuda or cpu. Default: cuda |
+| --batch BATCH | Batch size |
+| --name NAME | Name of checkpoint. Commonly as DATA-NAME |
+| --experts | Number of experts |
+| --eta | Eta is a temperature factor that adjusts the sensitivity of prefix weights. |
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --device DEVICE
-  --batch BATCH         Batch size.
-  --name NAME           Name of checkpoint. Commonly as DATA-NAME.
-  --experts             Number of experts
-  --eta                 Eta is a temperature factor that adjusts the sensitivity of prefix weights.
-```
 
