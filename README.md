@@ -33,34 +33,18 @@ usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] 
 | --contrast CONTRAST | Whether use contrastive model. Default: True |
 | --graph GRAPH | Whether use graph encoder. Default: True |
 | --layer LAYER | Layer of Graphormer |
-  -h, --help            show this help message and exit
-  --lr LR               Learning rate.
-  --data {WebOfScience,nyt,rcv1}
-                        Dataset.
-  --batch BATCH         Batch size.
-  --early-stop EARLY_STOP
-                        Epoch before early stop.
-  --device DEVICE		cuda or cpu. Default: cuda
-  --name NAME           A name for different runs.
-  --update UPDATE       Gradient accumulate steps
-  --warmup WARMUP       Warmup steps.
-  --contrast CONTRAST   Whether use contrastive model. Default: True
-  --graph GRAPH         Whether use graph encoder. Default: True
-  --layer LAYER         Layer of Graphormer.
-  --multi               Whether the task is multi-label classification. Should keep default since all 
-  						datasets are multi-label classifications. Default: True
-  --lamb LAMB           lambda
-  --thre THRE           Threshold for keeping tokens. Denote as gamma in the paper.
-  --tau TAU             Temperature for contrastive model.
-  --seed SEED           Random seed.
-  --wandb               Use wandb for logging.
-  --experts             Number of experts
-  --ta                  If prefix weight ≤ tau , the loss of expert m on the sample will be eliminated.
-  --eta                 Eta is a temperature factor that adjusts the sensitivity of prefix weights.
+| --multi | Whether the task is multi-label classification. Should keep default since all 
+  						datasets are multi-label classifications. Default: True |
+| --lamb LAMB | lambda |
+| --thre THRE | Threshold for keeping tokens. Denote as gamma in the paper. |
+| --tau TAU | Temperature for contrastive model |
+| --seed SEED | Random seed |
+| --wandb | Use wandb for logging |
+| --experts | Number of experts |
+| --ta | If prefix weight ≤ tau , the loss of expert m on the sample will be eliminated. |
+| --eta | Eta is a temperature factor that adjusts the sensitivity of prefix weights. |
 
 
-Checkpoints are in `./checkpoints/DATA-NAME`. Two checkpoints are kept based on macro-F1 and micro-F1 respectively 
-(`checkpoint_best_macro.pt`, `checkpoint_best_micro.pt`).
 
 e.g. Train on `WebOfScience` with `batch=12, lambda=0.05, gamma=0.02`. Checkpoints will be in `checkpoints/WebOfScience-test/`.
 
