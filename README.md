@@ -16,7 +16,6 @@ Please download the original dataset
 
 ## Train
 
-```
 usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] [--early-stop EARLY_STOP] [--device DEVICE] --name NAME [--update UPDATE] [--warmup WARMUP] [--contrast CONTRAST] [--graph GRAPH] [--layer LAYER]
                 [--multi] [--lamb LAMB] [--thre THRE] [--tau TAU] [--seed SEED] [--wandb] [--experts] [--ta] [--eta]
 
@@ -58,7 +57,7 @@ usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] 
   --experts             Number of experts
   --ta                  If prefix weight ≤ tau , the loss of expert m on the sample will be eliminated.
   --eta                 Eta is a temperature factor that adjusts the sensitivity of prefix weights.
-```
+
 
 Checkpoints are in `./checkpoints/DATA-NAME`. Two checkpoints are kept based on macro-F1 and micro-F1 respectively 
 (`checkpoint_best_macro.pt`, `checkpoint_best_micro.pt`).
