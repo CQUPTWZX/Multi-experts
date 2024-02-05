@@ -15,9 +15,10 @@
 Please download the original dataset
 
 ## Train
-
+```shell
 usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] [--early-stop EARLY_STOP] [--device DEVICE] --name NAME [--update UPDATE] [--warmup WARMUP] [--contrast CONTRAST] [--graph GRAPH] [--layer LAYER]
                 [--multi] [--lamb LAMB] [--thre THRE] [--tau TAU] [--seed SEED] [--wandb] [--experts] [--ta] [--eta]
+```
 
 | Option |  Description |
 |--------|-------------|
@@ -56,8 +57,9 @@ python train.py --name test --batch 12 --data WebOfScience --lamb 0.05 --thre 0.
 The related parameter configuration has been published in the paper.
 
 ## Test
-
+```shell
 usage: test.py [-h] [--device DEVICE] [--batch BATCH] [--name NAME] [--experts] [--eta]
+```
 | Option |  Description |
 |--------|-------------|
 | -h, --help | show this help message and exit |
