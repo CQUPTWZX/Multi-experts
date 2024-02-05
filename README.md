@@ -12,7 +12,8 @@
 
 ## Preprocess
 
-Please download the original dataset
+Please download the original dataset. Transform your dataset to json format file {'token': List[str], 'label': List[str]}  
+You can refer to datasets/preprocess.py
 
 ### Web Of Science (WOS)
 
