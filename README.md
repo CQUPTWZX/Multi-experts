@@ -33,8 +33,7 @@ usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] 
 | --contrast CONTRAST | Whether use contrastive model. Default: True |
 | --graph GRAPH | Whether use graph encoder. Default: True |
 | --layer LAYER | Layer of Graphormer |
-| --multi | Whether the task is multi-label classification. Should keep default since all 
-  						datasets are multi-label classifications. Default: True |
+| --multi | Whether the task is multi-label classification. Should keep default since all datasets are multi-label classifications. Default: True |
 | --lamb LAMB | lambda |
 | --thre THRE | Threshold for keeping tokens. Denote as gamma in the paper. |
 | --tau TAU | Temperature for contrastive model |
