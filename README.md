@@ -23,6 +23,9 @@ The original dataset can be acquired freely in the repository of [HDLTex](https:
 
 The preprocessing code could refer to the [repository of reuters_loader](https://github.com/ductri/reuters_loader) and we provide a copy here. The original dataset can be acquired [here](https://trec.nist.gov/data/reuters/reuters.html) by signing an agreement. It took us 1 data to receive a response.
 
+### AAPD
+They collect the abstract and the corresponding subjects of 55,840 papers in the computer science field from the Arxiv.[SGM](https://github.com/lancopku/SGM).
+
 
 ## Train
 ```shell
