@@ -20,7 +20,20 @@ Please download the original dataset
 usage: train.py [-h] [--lr LR] [--data {WebOfScience,nyt,rcv1}] [--batch BATCH] [--early-stop EARLY_STOP] [--device DEVICE] --name NAME [--update UPDATE] [--warmup WARMUP] [--contrast CONTRAST] [--graph GRAPH] [--layer LAYER]
                 [--multi] [--lamb LAMB] [--thre THRE] [--tau TAU] [--seed SEED] [--wandb] [--experts] [--ta] [--eta]
 
-optional arguments:
+| Option |  Description |
+|--------|-------------|
+| -h, --help | show this help message and exit |
+| --lr LR | Learning rate |
+| --data {WebOfScience,nyt,rcv1} | Dataset |
+| --batch BATCH | Batch size |
+| --early-stop EARLY_STOP | Epoch before early stop |
+| --device DEVICE | cuda or cpu. Default: cuda |
+| --name NAME | A name for different runs |
+| --update UPDATE | Gradient accumulate steps |
+| --warmup WARMUP | Warmup steps |
+| --contrast CONTRAST | Whether use contrastive model. Default: True |
+| --graph GRAPH | Whether use graph encoder. Default: True |
+| --layer LAYER | Layer of Graphormer |
   -h, --help            show this help message and exit
   --lr LR               Learning rate.
   --data {WebOfScience,nyt,rcv1}
