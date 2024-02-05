@@ -26,6 +26,8 @@ The preprocessing code could refer to the [repository of reuters_loader](https:/
 ### AAPD
 They collect the abstract and the corresponding subjects of 55,840 papers in the computer science field from the Arxiv.[SGM](https://github.com/lancopku/SGM).
 
+### BGC
+BGC dataset is available at [Blurb Genre Collection](www.inf.uni-hamburg.de/en/inst/ab/lt/resources/data/blurb-genre-collection.html).
 
 ## Train
 ```shell
