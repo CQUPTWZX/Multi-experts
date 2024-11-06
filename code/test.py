@@ -17,7 +17,6 @@ parser.add_argument('--experts', type=int, default=3, help='Number of experts')
 parser.add_argument('--eta', default=0.91, type=float,
                     help='eta is a temperature factor that adjusts the sensitivity of prefix weights.')
 extra_choices = ['_macro1', '_micro1', '_macro2', '_micro2']
-# 创建参数并添加到一个列表
 extra_args = []
 args = parser.parse_args()
 experts = args.experts
@@ -69,7 +68,7 @@ if __name__ == '__main__':
                         contrast_loss=args.contrast, graph=args.graph,
                         layer=args.layer, data_path=data_path, multi_label=args.multi,
                         lamb=args.lamb, threshold=args.thre, tau=args.tau)
-    shared_embeddings = CommonBertEmbeddings(config)  # 在这里添加适当的配置参数
+    shared_embeddings = CommonBertEmbeddings(config)
     for i in range(experts):
         checkpoint = model_checkpoints[i]
         model = ContrastModel.from_pretrained("./bert-base-uncased", num_labels=num_class,
@@ -98,12 +97,10 @@ if __name__ == '__main__':
         for data, label, idx in pbar:
             outputs = []
             padding_mask = data != tokenizer.pad_token_id
-            # 循环遍历模型列表并计算输出
             for model in models:
                 output = model(data, padding_mask, labels=label, return_dict=True)
                 outputs.append(output)
             xis = [None] * len(outputs)
-            # evidential
             for i in range(len(outputs)):
                 xis[i] = outputs[i]['logits']
             num_classes = outputs[0]['num_labels']
@@ -121,9 +118,7 @@ if __name__ == '__main__':
                     bb = b0.view(-1, b0.shape[1], 1) @ b.view(-1, 1, b.shape[1])
                     C = bb.sum(dim=[1, 2]) - bb.diagonal(dim1=1, dim2=2).sum(dim=1)
                 b0 = b
-                w.append(w[-1] * u / (1 - C))  # 前置权重
-
-            # dynamic reweighting
+                w.append(w[-1] * u / (1 - C))
             exp_w = [torch.exp(wi / eta) for wi in w]
             exp_w = exp_w[:-1]
             exp_w_sum = sum(exp_w)
@@ -136,7 +131,7 @@ if __name__ == '__main__':
             xi = torch.mean(torch.stack(reweighted_outs), dim=0)
             encoding_array.append(xi)
             for l in label:
-                t = []  # 存储真实标签为1
+                t = []  
                 for i in range(l.size(0)):
                     if l[i].item() == 1:
                         t.append(i)
