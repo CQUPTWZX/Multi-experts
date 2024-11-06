@@ -55,7 +55,7 @@ class BertDataset(Dataset):
 class CommonBertEmbeddings(nn.Module):
     def __init__(self, config):
         super(CommonBertEmbeddings, self).__init__()
-        self.embeddings = BertEmbeddings(config)  # 使用实际的 BertEmbeddings 或自定义的嵌入层
+        self.embeddings = BertEmbeddings(config)
 
 
 class Saver:
