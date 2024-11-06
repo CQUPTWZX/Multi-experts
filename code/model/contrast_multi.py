@@ -8,78 +8,10 @@ import torch.nn.functional as F
 import numpy as np
 from .graph import GraphEncoder
 
-class ASLoss(nn.Module):
-    ''' Notice - optimized version, minimizes memory allocation and gpu uploading,
-    favors inplace operations'''
-
-    def __init__(self, gamma_neg=3, gamma_pos=1, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=False):
-        super(ASLoss, self).__init__()
-
-        self.gamma_neg = gamma_neg
-        self.gamma_pos = gamma_pos
-        self.clip = clip
-        self.disable_torch_grad_focal_loss = disable_torch_grad_focal_loss
-        self.eps = eps
-
-        # prevent memory allocation and gpu uploading every iteration, and encourages inplace operations
-        self.targets = self.anti_targets = self.xs_pos = self.xs_neg = self.asymmetric_w = self.loss = None
-
-    def forward(self, x, y):
-        """"
-        Parameters
-        ----------
-        x: input logits
-        y: targets (multi-label binarized vector)
-        """
-
-        self.targets = y
-        self.anti_targets = 1 - y
-
-        # the probability of the labels
-        self.xs_pos = torch.sigmoid(x)
-        self.xs_neg = 1.0 - self.xs_pos
-
-        # clip
-        if self.clip is not None and self.clip > 0:
-            self.xs_neg.add_(self.clip).clamp_(max=1)
-
-        self.loss = self.targets * torch.log(self.xs_pos.clamp(min=self.eps))           #y*log(p)
-        self.loss.add_(self.anti_targets * torch.log(self.xs_neg.clamp(min=self.eps)))  #(1-y)*log(1-p_m)
-
-        # Asymmetric Focusing
-        if self.gamma_neg > 0 or self.gamma_pos > 0:
-            if self.disable_torch_grad_focal_loss:
-                torch.set_grad_enabled(False)
-
-            # 以下 4 行相当于做了个并行操作
-            self.xs_pos = self.xs_pos * self.targets                                        #p*y
-            self.xs_neg = self.xs_neg * self.anti_targets                                   #(1-p_m)*(1-y)
-            self.asymmetric_w = torch.pow(1 - self.xs_pos - self.xs_neg,
-                                          self.gamma_pos * self.targets + self.gamma_neg * self.anti_targets)
-            if self.disable_torch_grad_focal_loss:
-                torch.set_grad_enabled(True)
-            self.loss *= self.asymmetric_w
-        return -self.loss.sum()
-
-# the mlti-label negative supervision loss
-class MLNS(nn.Module):
-    def __init__(self):
-        super(MLNS, self).__init__()
-
-    def forward(self, x, labels):
-        x = F.normalize(x, p=2, dim=1)  ##  x/||x||
-        sim = x @ x.t()  # x*xT
-        labels = labels.type(x.dtype)
-        C = labels @ labels.t()  # C is the number of the same labels
-        beta = labels.sum(dim=1).reshape(-1, 1) - C  # compute the label difference
-        loss = beta * sim
-        return loss.sum()
-
 class BertPoolingLayer(nn.Module):
     def __init__(self, config, avg='cls'):
         super(BertPoolingLayer, self).__init__()
         self.avg = avg
-
     def forward(self, x):
         if self.avg == 'cls':
             x = x[:, 0, :]
@@ -128,19 +60,56 @@ class NTXent(nn.Module):
 
     def forward(self, x, labels=None):
         x = self.transform(x)
-        n = x.shape[0]  #样本数
-        x = F.normalize(x, p=2, dim=1) / np.sqrt(self.tau) #  x/||x||
-        # 2B * 2B
-        sim = x @ x.t() #x*xT
+        n = x.shape[0]
+        x = F.normalize(x, p=2, dim=1) / np.sqrt(self.tau)
+        sim = x @ x.t()
         sim[np.arange(n), np.arange(n)] = -1e9
         logprob = F.log_softmax(sim, dim=1)
-
         m = 2
         labels = (np.repeat(np.arange(n), m) + np.tile(np.arange(m) * n // m, n)) % n
-        # remove labels pointet to itself, i.e. (i, i)
         labels = labels.reshape(n, m)[:, 1:].reshape(-1)
         loss = -logprob[np.repeat(np.arange(n), m - 1), labels].sum() / n / (m - 1) / self.norm
         return loss
+
+class ASLoss(nn.Module):
+    ''' Notice - optimized version, minimizes memory allocation and gpu uploading,
+    favors inplace operations'''
+
+    def __init__(self, gamma_neg=3, gamma_pos=1, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=False):
+        super(ASLoss, self).__init__()
+        self.gamma_neg = gamma_neg
+        self.gamma_pos = gamma_pos
+        self.clip = clip
+        self.disable_torch_grad_focal_loss = disable_torch_grad_focal_loss
+        self.eps = eps
+        self.targets = self.anti_targets = self.xs_pos = self.xs_neg = self.asymmetric_w = self.loss = None
+
+    def forward(self, x, y):
+        """"
+        Parameters
+        ----------
+        x: input logits
+        y: targets (multi-label binarized vector)
+        """
+        self.targets = y
+        self.anti_targets = 1 - y
+        self.xs_pos = torch.sigmoid(x)
+        self.xs_neg = 1.0 - self.xs_pos
+        if self.clip is not None and self.clip > 0:
+            self.xs_neg.add_(self.clip).clamp_(max=1)
+        self.loss = self.targets * torch.log(self.xs_pos.clamp(min=self.eps))
+        self.loss.add_(self.anti_targets * torch.log(self.xs_neg.clamp(min=self.eps)))
+        if self.gamma_neg > 0 or self.gamma_pos > 0:
+            if self.disable_torch_grad_focal_loss:
+                torch.set_grad_enabled(False)
+            self.xs_pos = self.xs_pos * self.targets
+            self.xs_neg = self.xs_neg * self.anti_targets
+            self.asymmetric_w = torch.pow(1 - self.xs_pos - self.xs_neg,
+                                          self.gamma_pos * self.targets + self.gamma_neg * self.anti_targets)
+            if self.disable_torch_grad_focal_loss:
+                torch.set_grad_enabled(True)
+            self.loss *= self.asymmetric_w
+        return -self.loss.sum()
 
 class BaseModelOutputWithPoolingAndCrossAttentions(ModelOutput):
     last_hidden_state = None
@@ -151,6 +120,59 @@ class BaseModelOutputWithPoolingAndCrossAttentions(ModelOutput):
     cross_attentions = None
     input_embeds = None
 
+class ASLoss(nn.Module):
+    ''' Notice - optimized version, minimizes memory allocation and gpu uploading,
+    favors inplace operations'''
+
+    def __init__(self, gamma_neg=3, gamma_pos=1, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=False):
+        super(ASLoss, self).__init__()
+
+        self.gamma_neg = gamma_neg
+        self.gamma_pos = gamma_pos
+        self.clip = clip
+        self.disable_torch_grad_focal_loss = disable_torch_grad_focal_loss
+        self.eps = eps
+        self.targets = self.anti_targets = self.xs_pos = self.xs_neg = self.asymmetric_w = self.loss = None
+
+    def forward(self, x, y):
+        """"
+        Parameters
+        ----------
+        x: input logits
+        y: targets (multi-label binarized vector)
+        """
+        self.targets = y
+        self.anti_targets = 1 - y
+        self.xs_pos = torch.sigmoid(x)
+        self.xs_neg = 1.0 - self.xs_pos
+        if self.clip is not None and self.clip > 0:
+            self.xs_neg.add_(self.clip).clamp_(max=1)
+        self.loss = self.targets * torch.log(self.xs_pos.clamp(min=self.eps))
+        self.loss.add_(self.anti_targets * torch.log(self.xs_neg.clamp(min=self.eps)))
+        if self.gamma_neg > 0 or self.gamma_pos > 0:
+            if self.disable_torch_grad_focal_loss:
+                torch.set_grad_enabled(False)
+            self.xs_pos = self.xs_pos * self.targets
+            self.xs_neg = self.xs_neg * self.anti_targets
+            self.asymmetric_w = torch.pow(1 - self.xs_pos - self.xs_neg,
+                                          self.gamma_pos * self.targets + self.gamma_neg * self.anti_targets)
+            if self.disable_torch_grad_focal_loss:
+                torch.set_grad_enabled(True)
+            self.loss *= self.asymmetric_w
+        return -self.loss.sum()
+
+class MLNS(nn.Module):
+    def __init__(self):
+        super(MLNS, self).__init__()
+
+    def forward(self, x, labels):
+        x = F.normalize(x, p=2, dim=1)
+        sim = x @ x.t()
+        labels = labels.type(x.dtype)
+        C = labels @ labels.t()
+        beta = labels.sum(dim=1).reshape(-1, 1) - C
+        loss = beta * sim
+        return loss.sum()
 
 class BertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
@@ -160,13 +182,8 @@ class BertEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
-
-        # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
-        # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
-        # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
@@ -223,7 +240,6 @@ class BertModel(BertPreTrainedModel):
 
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
-    # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Roberta
     def __init__(self, config):
         super().__init__(config)
         self.config = config
@@ -233,13 +249,13 @@ class BertModel(BertPreTrainedModel):
         self.pooler = None
         self.init_weights()
 
-    def get_input_embeddings(self):  # 返回词嵌入向量
+    def get_input_embeddings(self):  #
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, value):  # 设置词嵌入向量
+    def set_input_embeddings(self, value):
         self.embeddings.word_embeddings = value
 
-    def _prune_heads(self, heads_to_prune):  # 每一层注意力的头数
+    def _prune_heads(self, heads_to_prune):
         """
         Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
         class PreTrainedModel
@@ -247,7 +263,6 @@ class BertModel(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    # Copied from transformers.models.bert.modeling_bert.BertModel.forward
     def forward(
             self,
             input_ids=None,
@@ -306,20 +321,14 @@ class BertModel(BertPreTrainedModel):
 
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
-        # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
-
-        # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
-        # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, device)
 
-        # If a 2D or 3D attention mask is provided for the cross-attention
-        # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.config.is_decoder and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
@@ -329,11 +338,6 @@ class BertModel(BertPreTrainedModel):
         else:
             encoder_extended_attention_mask = None
 
-        # Prepare head mask if needed
-        # 1.0 in head_mask indicate we keep the head
-        # attention_probs has shape bsz x n_heads x N x N
-        # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
-        # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         embedding_output, inputs_embeds = self.embeddings(
@@ -386,7 +390,6 @@ class ContrastModel(BertPreTrainedModel):
         self.cls_loss = cls_loss
         self.contrast_loss = contrast_loss
         self.token_classifier = BertOutputLayer(config)
-
         self.graph_encoder = GraphEncoder(config, graph, layer=layer, data_path=data_path, threshold=threshold, tau=tau)
         self.lamb = lamb
         self.NSL=NSL
@@ -396,7 +399,6 @@ class ContrastModel(BertPreTrainedModel):
         self.gama_neg=gama_neg
         self.gama_pos=gama_pos
 
-    # @autocast
     def forward(
             self,
             input_ids=None,
@@ -415,7 +417,7 @@ class ContrastModel(BertPreTrainedModel):
 
         contrast_mask = None
 
-        outputs = self.bert(  # 经过BERT模型后得到的结果
+        outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -432,7 +434,7 @@ class ContrastModel(BertPreTrainedModel):
         pooled_output = self.dropout(self.pooler(pooled_output))
 
         loss = 0
-        contrastive_loss = None  # 对比损失
+        contrastive_loss = None
         contrast_logits = None
         logits = self.classifier(pooled_output)
 
@@ -441,13 +443,11 @@ class ContrastModel(BertPreTrainedModel):
                 loss_fct = CrossEntropyLoss()
                 target = labels.view(-1)
             else:
-                # loss_fct = BCEWithLogitsLoss()  # cross-entropy loss
-                loss_fct = ASLoss(gamma_neg=self.gama_neg,gamma_pos=self.gama_pos) #asymmetric loss
+                loss_fct = ASLoss(gamma_neg=self.gama_neg,gamma_pos=self.gama_pos)
                 target = labels.to(torch.float32)
 
             if self.cls_loss:
                 if self.num_labels == 1:
-                    #  We are doing regression
                     loss_fct = MSELoss()
                     loss += loss_fct(logits.view(-1), labels.view(-1))
                 else:
@@ -473,7 +473,6 @@ class ContrastModel(BertPreTrainedModel):
 
                 contrastive_loss = self.contrastive_lossfct(
                     torch.cat([pooled_output, contrast_sequence_output], dim=0))
-                # classification loss
                 loss += loss_fct(contrast_logits.view(-1, self.num_labels), target)
             if contrastive_loss is not None and self.contrast_loss:
                 loss += contrastive_loss * self.lamb

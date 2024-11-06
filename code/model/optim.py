@@ -4,17 +4,17 @@ import torch
 import math
 
 
-class ScheduledOptim:  # 学习率调度
+class ScheduledOptim:
     '''A simple wrapper class for learning rate scheduling'''
 
     def __init__(self, optimizer, lr, n_warmup_steps=4000, init_lr=0.):
-        self._optimizer = optimizer  # 优化器对象，例如torch.optim.Adam
-        self.init_lr = init_lr  # 预热阶段初始学习率
-        self.n_warmup_steps = n_warmup_steps  # 预热步数，表示在这些步数内逐渐增加学习率
-        self.n_steps = 0  # 当前训练步数
-        self.lr = lr  # 初始学习率
-        self.lr_step = (lr - init_lr) / n_warmup_steps  # 每个预热步数的学习率增加步长
-        self.decay_factor = lr * n_warmup_steps ** 0.5  # 学习率的衰减因子
+        self._optimizer = optimizer
+        self.init_lr = init_lr
+        self.n_warmup_steps = n_warmup_steps
+        self.n_steps = 0
+        self.lr = lr
+        self.lr_step = (lr - init_lr) / n_warmup_steps
+        self.decay_factor = lr * n_warmup_steps ** 0.5
 
     def step(self, scaler=None):
         "Step with the inner optimizer"
@@ -81,7 +81,7 @@ class Adam(torch.optim.Optimizer):
         https://openreview.net/forum?id=ryQu7f-RZ
     """
 
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,  # params：要优化的参数,可以是一个迭代器或定义参数组的字典
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=0, amsgrad=False):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay, amsgrad=amsgrad)
@@ -125,12 +125,9 @@ class Adam(torch.optim.Optimizer):
                 # State initialization
                 if len(state) == 0:
                     state['step'] = 0
-                    # Exponential moving average of gradient values
                     state['exp_avg'] = torch.zeros_like(p_data_fp32)
-                    # Exponential moving average of squared gradient values
                     state['exp_avg_sq'] = torch.zeros_like(p_data_fp32)
                     if amsgrad:
-                        # Maintains max of all exp. moving avg. of sq. grad. values
                         state['max_exp_avg_sq'] = torch.zeros_like(p_data_fp32)
                 else:
                     state['exp_avg'] = state['exp_avg'].to(p_data_fp32)
@@ -144,14 +141,10 @@ class Adam(torch.optim.Optimizer):
                 beta1, beta2 = group['betas']
 
                 state['step'] += 1
-
-                # Decay the first and second moment running average coefficient
                 exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
                 if amsgrad:
-                    # Maintains the maximum of all 2nd moment running avg. till now
                     torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
-                    # Use the max. for normalizing running avg. of gradient
                     denom = max_exp_avg_sq.sqrt().add_(group['eps'])
                 else:
                     denom = exp_avg_sq.sqrt().add_(group['eps'])
